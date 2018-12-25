@@ -100,9 +100,26 @@ public abstract class SolrClient implements Serializable, Closeable {
    * @since Solr 5.1
    */
   public UpdateResponse add(String collection, Collection<SolrInputDocument> docs, int commitWithinMs) throws SolrServerException, IOException {
+    return add(collection, docs, null, commitWithinMs);
+  }
+
+    /**
+     * Adds a collection of documents
+     *
+     * @param collection the Solr collection to add documents to
+     * @param docs  the collection of documents
+     * @param params  additional request parameters
+     * @param commitWithinMs  max time (in ms) before a commit will happen
+     * @return an {@link org.apache.solr.client.solrj.response.UpdateResponse} from the server
+     *
+     * @throws IOException         if there is a communication error with the server
+     * @throws SolrServerException if there is an error on the server
+     */
+  public UpdateResponse add(String collection, Collection<SolrInputDocument> docs, SolrParams params, int commitWithinMs) throws SolrServerException, IOException {
     UpdateRequest req = new UpdateRequest();
     req.add(docs);
     req.setCommitWithin(commitWithinMs);
+    req.setParams(params);
     return req.process(this, collection);
   }
 
@@ -326,6 +343,25 @@ public abstract class SolrClient implements Serializable, Closeable {
    * The beans are converted to {@link SolrInputDocument}s by the client's
    * {@link org.apache.solr.client.solrj.beans.DocumentObjectBinder}
    *
+   * @param collection the Solr collection to add documents to
+   * @param beans  the collection of beans
+   * @param  params  additional request parameters
+   *
+   * @return an {@link org.apache.solr.client.solrj.response.UpdateResponse} from the server
+   *
+   * @throws IOException         if there is a communication error with the server
+   * @throws SolrServerException if there is an error on the server
+   */
+  public UpdateResponse addBeans(String collection, Collection<?> beans, SolrParams params) throws SolrServerException, IOException {
+    return addBeans(collection, beans, params, -1);
+  }
+
+  /**
+   * Adds a collection of beans
+   *
+   * The beans are converted to {@link SolrInputDocument}s by the client's
+   * {@link org.apache.solr.client.solrj.beans.DocumentObjectBinder}
+   *
    * @param beans  the collection of beans
    *
    * @return an {@link org.apache.solr.client.solrj.response.UpdateResponse} from the server
@@ -356,13 +392,13 @@ public abstract class SolrClient implements Serializable, Closeable {
    *
    * @since solr 5.1
    */
-  public UpdateResponse addBeans(String collection, Collection<?> beans, int commitWithinMs) throws SolrServerException, IOException {
+  public UpdateResponse addBeans(String collection, Collection<?> beans, SolrParams params, int commitWithinMs) throws SolrServerException, IOException {
     DocumentObjectBinder binder = this.getBinder();
     ArrayList<SolrInputDocument> docs =  new ArrayList<>(beans.size());
     for (Object bean : beans) {
       docs.add(binder.toSolrInputDocument(bean));
     }
-    return add(collection, docs, commitWithinMs);
+    return add(collection, docs, params, commitWithinMs);
   }
 
   /**
@@ -1032,12 +1068,12 @@ public abstract class SolrClient implements Serializable, Closeable {
   }
 
   /**
-   * Query solr, and stream the results.  Unlike the standard query, this will 
+   * Query solr, and stream the results.  Unlike the standard query, this will
    * send events for each Document rather then add them to the QueryResponse.
    *
    * Although this function returns a 'QueryResponse' it should be used with care
    * since it excludes anything that was passed to callback.  Also note that
-   * future version may pass even more info to the callback and may not return 
+   * future version may pass even more info to the callback and may not return
    * the results in the QueryResponse.
    *
    * @param collection the Solr collection to query
